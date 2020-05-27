@@ -29,11 +29,18 @@
 #include "Open3D/Geometry/RGBDImage.h"
 #include "Open3D/IO/Sensor/AzureKinect/MKVMetadata.h"
 #include "Open3D/Utility/IJsonConvertible.h"
+#include <k4a/k4atypes.h>
+#include <map>
 
 struct _k4a_playback_t;        // typedef _k4a_playback_t* k4a_playback_t;
 struct _k4a_capture_t;         // typedef _k4a_capture_t* k4a_capture_t;
 struct _k4a_transformation_t;  // typedef _k4a_transformation_t*
-                               // k4a_transformation_t;
+
+// k4a_transformation_t;
+struct RGBDIMUResult {
+    std::shared_ptr<open3d::geometry::RGBDImage> rgbd;
+    float imu;
+};
 
 namespace open3d {
 namespace io {
@@ -65,6 +72,8 @@ public:
     bool SeekTimestamp(size_t timestamp);
     /// Get next frame from the mkv playback and returns the RGBD object.
     std::shared_ptr<geometry::RGBDImage> NextFrame();
+    /// Get next IMU from the mkv playback and returns the IMU data.
+    std::map<std::string, float > NextImu();
 
 private:
     _k4a_playback_t *handle_;

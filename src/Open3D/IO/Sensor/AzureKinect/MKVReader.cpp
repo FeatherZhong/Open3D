@@ -35,6 +35,8 @@
 
 #include "Open3D/IO/Sensor/AzureKinect/AzureKinectSensor.h"
 #include "Open3D/IO/Sensor/AzureKinect/K4aPlugin.h"
+#include <map>
+
 
 namespace open3d {
 namespace io {
@@ -159,9 +161,13 @@ std::shared_ptr<geometry::RGBDImage> MKVReader::NextFrame() {
         utility::LogError("Null file handler. Please call Open().");
     }
 
+//    RGBDIMUResult result;
     k4a_capture_t k4a_capture;
+//    k4a_imu_sample_t imu_sample;
     k4a_stream_result_t res =
             k4a_plugin::k4a_playback_get_next_capture(handle_, &k4a_capture);
+//    k4a_stream_result_t res_imu =
+//            k4a_plugin::k4a_playback_get_next_imu_sample(handle_, &imu_sample);
     if (K4A_STREAM_RESULT_EOF == res) {
         utility::LogInfo("EOF reached");
         is_eof_ = true;
@@ -176,6 +182,31 @@ std::shared_ptr<geometry::RGBDImage> MKVReader::NextFrame() {
     k4a_plugin::k4a_capture_release(k4a_capture);
 
     return rgbd;
+}
+
+std::map<std::string, float> MKVReader::NextImu() {
+    std::map<std::string, float> mapResult;
+    if (!IsOpened()) {
+        utility::LogError("Null file handler. Please call Open().");
+    }
+
+    k4a_imu_sample_t imu_sample;
+
+    k4a_stream_result_t res_imu =
+            k4a_plugin::k4a_playback_get_next_imu_sample(handle_, &imu_sample);
+    if (K4A_STREAM_RESULT_FAILED == res_imu){
+        utility::LogInfo("IMU sample data Failed");
+        return mapResult;
+    } else{
+//        utility::LogInfo("IMU sample data {}", imu_sample.acc_sample.xyz.x);
+        mapResult.insert(std::pair<std::string, float>("acc_sample_x", imu_sample.acc_sample.xyz.x));
+        mapResult.insert(std::pair<std::string, float>("acc_sample_y", imu_sample.acc_sample.xyz.y));
+        mapResult.insert(std::pair<std::string, float>("acc_sample_z", imu_sample.acc_sample.xyz.z));
+        mapResult.insert(std::pair<std::string, float>("gyro_sample_x", imu_sample.gyro_sample.xyz.x));
+        mapResult.insert(std::pair<std::string, float>("gyro_sample_y", imu_sample.gyro_sample.xyz.y));
+        mapResult.insert(std::pair<std::string, float>("gyro_sample_z", imu_sample.gyro_sample.xyz.z));
+        return mapResult;
+    }
 }
 }  // namespace io
 }  // namespace open3d

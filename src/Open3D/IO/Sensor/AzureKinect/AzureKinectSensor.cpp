@@ -30,6 +30,7 @@
 #include <k4arecord/record.h>
 #include <turbojpeg.h>
 #include <memory>
+#include <iostream>
 
 #include "Open3D/Geometry/RGBDImage.h"
 #include "Open3D/IO/Sensor/AzureKinect/K4aPlugin.h"
@@ -42,6 +43,7 @@ AzureKinectSensor::AzureKinectSensor(
     : RGBDSensor(), sensor_config_(sensor_config) {}
 
 AzureKinectSensor::~AzureKinectSensor() {
+    k4a_plugin::k4a_device_stop_imu(device_);
     k4a_plugin::k4a_device_stop_cameras(device_);
     k4a_plugin::k4a_device_close(device_);
 }
@@ -100,6 +102,14 @@ bool AzureKinectSensor::Connect(size_t sensor_index) {
                                                         &device_config))) {
         utility::LogWarning(
                 "Runtime error: k4a_plugin::k4a_device_set_color_control() "
+                "failed");
+        k4a_plugin::k4a_device_close(device_);
+        return false;
+    }
+
+    if (K4A_FAILED(k4a_plugin::k4a_device_start_imu(device_))) {
+        utility::LogWarning(
+                "Runtime error: k4a_plugin::k4a_device_start_imu() "
                 "failed");
         k4a_plugin::k4a_device_close(device_);
         return false;

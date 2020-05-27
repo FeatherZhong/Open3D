@@ -70,6 +70,10 @@ bool AzureKinectRecorder::OpenRecord(const std::string& filename) {
                                 filename);
             return false;
         }
+        if (K4A_RESULT_SUCCEEDED != k4a_plugin::k4a_record_add_imu_track(recording_)) {
+            utility::LogError("Unable to write IMU track\n");
+        }
+
         if (K4A_FAILED(k4a_plugin::k4a_record_write_header(recording_))) {
             utility::LogWarning("Unable to write header");
             return false;
@@ -115,6 +119,28 @@ std::shared_ptr<geometry::RGBDImage> AzureKinectRecorder::RecordFrame(
         return nullptr;
     }
     k4a_plugin::k4a_capture_release(capture);
+
+    k4a_imu_sample_t sample;
+    auto imu_result = k4a_plugin::k4a_device_get_imu_sample(sensor_.device_, &sample, 0);
+
+    if (imu_result == K4A_WAIT_RESULT_TIMEOUT)
+    {
+        std::cerr << "Runtime error: k4a_imu_get_sample() returned TIMEOUT" << imu_result << std::endl;
+    }
+    else if (imu_result != K4A_WAIT_RESULT_SUCCEEDED)
+    {
+        std::cerr << "Runtime error: k4a_imu_get_sample() returned " << imu_result << std::endl;
+    }
+    if (is_record_created_ && write)
+    {
+        k4a_result_t write_result = k4a_plugin::k4a_record_write_imu_sample(recording_, sample);
+        utility::LogInfo("Writing IMU {},{},{}",sample.acc_sample.xyz.x,sample.acc_sample.xyz.y,sample.acc_sample.xyz.z);
+        if (K4A_FAILED(write_result))
+        {
+            std::cerr << "Runtime error: k4a_record_write_imu_sample() returned " << write_result << std::endl;
+        }
+    }
+
     return im_rgbd;
 }
 }  // namespace io
