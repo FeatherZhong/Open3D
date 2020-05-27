@@ -69,7 +69,7 @@ class ReaderWithCallback:
                 json.dump(config, f, indent=4)
 
         idx = 0
-        imufile = open('imu.txt', 'w')
+        imufile = open('{}/imu.txt'.format(self.output), 'w')
         while not self.reader.is_eof() and not self.flag_exit:
             if self.flag_play:
                 rgbd = self.reader.next_frame()
