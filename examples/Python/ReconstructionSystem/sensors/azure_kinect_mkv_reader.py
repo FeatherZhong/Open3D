@@ -76,8 +76,9 @@ class ReaderWithCallback:
                 imu = self.reader.next_imu()
                 if imu['acc_sample_x'] != 0.0 or imu['acc_sample_y'] or imu['acc_sample_z']:
                     imufile.write(
-                        str(imu['acc_sample_x']) + '\t' + str(imu['acc_sample_y']) + '\t' + str(
-                            imu['acc_sample_z']) + '\t' +
+                        str(int(imu['acc_timestamp_usec'])) + '\t' + str(imu['acc_sample_x']) + '\t' + str(
+                            imu['acc_sample_y']) + '\t' + str(imu['acc_sample_z']) + '\t' + str(
+                            int(imu['gyro_timestamp_usec'])) + '\t' +
                         str(imu['gyro_sample_x']) + '\t' + str(imu['gyro_sample_y']) + '\t' + str(
                             imu['gyro_sample_z']) + '\n')
                 if rgbd is None:

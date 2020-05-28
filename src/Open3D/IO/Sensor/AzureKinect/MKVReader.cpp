@@ -205,6 +205,8 @@ std::map<std::string, float> MKVReader::NextImu() {
         mapResult.insert(std::pair<std::string, float>("gyro_sample_x", imu_sample.gyro_sample.xyz.x));
         mapResult.insert(std::pair<std::string, float>("gyro_sample_y", imu_sample.gyro_sample.xyz.y));
         mapResult.insert(std::pair<std::string, float>("gyro_sample_z", imu_sample.gyro_sample.xyz.z));
+        mapResult.insert(std::pair<std::string, float>("acc_timestamp_usec", imu_sample.acc_timestamp_usec));
+        mapResult.insert(std::pair<std::string, float>("gyro_timestamp_usec", imu_sample.gyro_timestamp_usec));
         return mapResult;
     }
 }
