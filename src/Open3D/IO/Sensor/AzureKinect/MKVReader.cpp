@@ -161,13 +161,9 @@ std::shared_ptr<geometry::RGBDImage> MKVReader::NextFrame() {
         utility::LogError("Null file handler. Please call Open().");
     }
 
-//    RGBDIMUResult result;
     k4a_capture_t k4a_capture;
-//    k4a_imu_sample_t imu_sample;
     k4a_stream_result_t res =
             k4a_plugin::k4a_playback_get_next_capture(handle_, &k4a_capture);
-//    k4a_stream_result_t res_imu =
-//            k4a_plugin::k4a_playback_get_next_imu_sample(handle_, &imu_sample);
     if (K4A_STREAM_RESULT_EOF == res) {
         utility::LogInfo("EOF reached");
         is_eof_ = true;
@@ -183,6 +179,31 @@ std::shared_ptr<geometry::RGBDImage> MKVReader::NextFrame() {
 
     return rgbd;
 }
+
+std::tuple<std::shared_ptr<geometry::RGBDImage>,int> MKVReader::NextFrameWithTimestamp() {
+    if (!IsOpened()) {
+        utility::LogError("Null file handler. Please call Open().");
+    }
+
+    k4a_capture_t k4a_capture;
+    k4a_stream_result_t res =
+            k4a_plugin::k4a_playback_get_next_capture(handle_, &k4a_capture);
+    if (K4A_STREAM_RESULT_EOF == res) {
+        utility::LogInfo("EOF reached");
+        is_eof_ = true;
+        return std::make_tuple(nullptr, 0);
+    } else if (K4A_STREAM_RESULT_FAILED == res) {
+        utility::LogInfo("Empty frame encountered, skip");
+        return std::make_tuple(nullptr, 0);
+    }
+    uint64_t timestamp;
+    auto rgbd =
+            AzureKinectSensor::DecompressCapture(k4a_capture, transformation_, &timestamp);
+    k4a_plugin::k4a_capture_release(k4a_capture);
+
+    return std::make_tuple(rgbd, timestamp);
+}
+
 
 std::map<std::string, float> MKVReader::NextImu() {
     std::map<std::string, float> mapResult;

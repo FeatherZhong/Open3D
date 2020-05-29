@@ -66,6 +66,9 @@ public:
     static std::shared_ptr<geometry::RGBDImage> DecompressCapture(
             _k4a_capture_t* capture, _k4a_transformation_t* transformation);
 
+    static std::shared_ptr<geometry::RGBDImage> DecompressCapture(
+            _k4a_capture_t* capture, _k4a_transformation_t* transformation, u_int64_t* timestamp);
+
 protected:
     _k4a_capture_t* CaptureRawFrame() const;
 

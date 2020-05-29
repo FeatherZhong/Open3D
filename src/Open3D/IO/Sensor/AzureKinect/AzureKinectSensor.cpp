@@ -339,5 +339,90 @@ std::shared_ptr<geometry::RGBDImage> AzureKinectSensor::DecompressCapture(
     return rgbd_buffer;
 }
 
+std::shared_ptr<geometry::RGBDImage> AzureKinectSensor::DecompressCapture(
+        k4a_capture_t capture, k4a_transformation_t transformation, uint64_t* timestamp) {
+    static std::shared_ptr<geometry::Image> color_buffer = nullptr;
+    static std::shared_ptr<geometry::RGBDImage> rgbd_buffer = nullptr;
+
+    if (color_buffer == nullptr) {
+        color_buffer = std::make_shared<geometry::Image>();
+    }
+    if (rgbd_buffer == nullptr) {
+        rgbd_buffer = std::make_shared<geometry::RGBDImage>();
+    }
+
+    k4a_image_t k4a_color = k4a_plugin::k4a_capture_get_color_image(capture);
+    k4a_image_t k4a_depth = k4a_plugin::k4a_capture_get_depth_image(capture);
+    if (k4a_color == nullptr || k4a_depth == nullptr) {
+        utility::LogDebug("Skipping empty captures.");
+        return nullptr;
+    }
+
+    /* Process color */
+    if (K4A_IMAGE_FORMAT_COLOR_MJPG !=
+        k4a_plugin::k4a_image_get_format(k4a_color)) {
+        utility::LogWarning(
+                "Unexpected image format. The stream may have "
+                "corrupted.");
+        return nullptr;
+    }
+
+    int width = k4a_plugin::k4a_image_get_width_pixels(k4a_color);
+    int height = k4a_plugin::k4a_image_get_height_pixels(k4a_color);
+
+    /* resize */
+    rgbd_buffer->color_.Prepare(width, height, 3, sizeof(uint8_t));
+    color_buffer->Prepare(width, height, 4, sizeof(uint8_t));
+
+    tjhandle tjHandle;
+    tjHandle = tjInitDecompress();
+    if (0 !=
+        tjDecompress2(tjHandle, k4a_plugin::k4a_image_get_buffer(k4a_color),
+                      static_cast<unsigned long>(
+                              k4a_plugin::k4a_image_get_size(k4a_color)),
+                      color_buffer->data_.data(), width, 0 /* pitch */, height,
+                      TJPF_BGRA, TJFLAG_FASTDCT | TJFLAG_FASTUPSAMPLE)) {
+        utility::LogWarning("Failed to decompress color image.");
+        return nullptr;
+    }
+    tjDestroy(tjHandle);
+    ConvertBGRAToRGB(*color_buffer, rgbd_buffer->color_);
+
+    /* transform depth to color plane */
+    k4a_image_t k4a_transformed_depth = nullptr;
+    if (transformation) {
+        rgbd_buffer->depth_.Prepare(width, height, 1, sizeof(uint16_t));
+        k4a_plugin::k4a_image_create_from_buffer(
+                K4A_IMAGE_FORMAT_DEPTH16, width, height,
+                width * sizeof(uint16_t), rgbd_buffer->depth_.data_.data(),
+                width * height * sizeof(uint16_t), NULL, NULL,
+                &k4a_transformed_depth);
+        if (K4A_RESULT_SUCCEEDED !=
+            k4a_plugin::k4a_transformation_depth_image_to_color_camera(
+                    transformation, k4a_depth, k4a_transformed_depth)) {
+            utility::LogWarning(
+                    "Failed to transform depth frame to color frame.");
+            return nullptr;
+        }
+    } else {
+        rgbd_buffer->depth_.Prepare(
+                k4a_plugin::k4a_image_get_width_pixels(k4a_depth),
+                k4a_plugin::k4a_image_get_height_pixels(k4a_depth), 1,
+                sizeof(uint16_t));
+        memcpy(rgbd_buffer->depth_.data_.data(),
+               k4a_plugin::k4a_image_get_buffer(k4a_depth),
+               k4a_plugin::k4a_image_get_size(k4a_depth));
+    }
+    *timestamp = k4a_plugin::k4a_image_get_timestamp_usec(k4a_color);
+
+    /* process depth */
+    k4a_plugin::k4a_image_release(k4a_color);
+    k4a_plugin::k4a_image_release(k4a_depth);
+    if (transformation) {
+        k4a_plugin::k4a_image_release(k4a_transformed_depth);
+    }
+
+    return rgbd_buffer;
+}
 }  // namespace io
 }  // namespace open3d

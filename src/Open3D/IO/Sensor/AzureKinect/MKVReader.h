@@ -74,7 +74,7 @@ public:
     std::shared_ptr<geometry::RGBDImage> NextFrame();
     /// Get next IMU from the mkv playback and returns the IMU data.
     std::map<std::string, float > NextImu();
-
+    std::tuple<std::shared_ptr<geometry::RGBDImage>,int> NextFrameWithTimestamp();
 private:
     _k4a_playback_t *handle_;
     _k4a_transformation_t *transformation_;

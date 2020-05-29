@@ -152,6 +152,9 @@ void pybind_sensor(py::module &m) {
             .def("next_frame", &io::MKVReader::NextFrame,
                  "Get next frame from the mkv playback and returns the RGBD "
                  "object.")
+            .def("next_frame_with_timestamp", &io::MKVReader::NextFrameWithTimestamp,
+                 "Get next frame from the mkv playback and returns the RGBD "
+                 "object.")
             .def("next_imu", &io::MKVReader::NextImu,
                  "Get next imu from the mkv playback and returns the imu data "
                  "object.");
@@ -166,6 +169,8 @@ void pybind_sensor(py::module &m) {
     docstring::ClassMethodDocInject(m, "AzureKinectMKVReader", "seek_timestamp",
                                     map_shared_argument_docstrings);
     docstring::ClassMethodDocInject(m, "AzureKinectMKVReader", "next_frame",
+                                    map_shared_argument_docstrings);
+    docstring::ClassMethodDocInject(m, "AzureKinectMKVReader", "next_frame_with_timestamp",
                                     map_shared_argument_docstrings);
 }
 
