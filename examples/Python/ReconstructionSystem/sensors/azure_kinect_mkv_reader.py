@@ -70,20 +70,29 @@ class ReaderWithCallback:
 
         idx = 0
         imufile = open('{}/imu.txt'.format(self.output), 'w')
-        while not self.reader.is_eof() and not self.flag_exit:
-            if self.flag_play:
-                rgbd = self.reader.next_frame()
-                imu = self.reader.next_imu()
-                if imu['acc_sample_x'] != 0.0 or imu['acc_sample_y'] or imu['acc_sample_z']:
+        timestampfile = open('{}/frame_timestamp.txt'.format(self.output), 'w')
+        imu_recorded_timestamp = []
+        while True:
+            imu = self.reader.next_imu()
+            if imu['acc_sample_x'] != 0.0 or imu['acc_sample_y'] != 0.0 or imu['acc_sample_z'] != 0.0:
+                if imu['acc_timestamp_usec'] not in imu_recorded_timestamp:
                     imufile.write(
                         str(int(imu['acc_timestamp_usec'])) + '\t' + str(imu['acc_sample_x']) + '\t' + str(
                             imu['acc_sample_y']) + '\t' + str(imu['acc_sample_z']) + '\t' + str(
                             int(imu['gyro_timestamp_usec'])) + '\t' +
                         str(imu['gyro_sample_x']) + '\t' + str(imu['gyro_sample_y']) + '\t' + str(
                             imu['gyro_sample_z']) + '\n')
+                    imu_recorded_timestamp.append(imu['acc_timestamp_usec'])
+            else:
+                break
+        while not self.reader.is_eof() and not self.flag_exit:
+            if self.flag_play:
+                frame_result = self.reader.next_frame_with_timestamp()
+                rgbd = frame_result[0]
                 if rgbd is None:
                     continue
-
+                timestamp = frame_result[1]
+                timestampfile.write(str(timestamp) + '\n')
                 if not vis_geometry_added:
                     vis.add_geometry(rgbd)
                     vis_geometry_added = True

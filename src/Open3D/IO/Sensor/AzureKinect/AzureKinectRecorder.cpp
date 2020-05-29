@@ -119,27 +119,30 @@ std::shared_ptr<geometry::RGBDImage> AzureKinectRecorder::RecordFrame(
         return nullptr;
     }
     k4a_plugin::k4a_capture_release(capture);
+    k4a_wait_result_t imu_result = K4A_WAIT_RESULT_SUCCEEDED;
+    do{
+        k4a_imu_sample_t sample;
+        imu_result = k4a_plugin::k4a_device_get_imu_sample(sensor_.device_, &sample, 0);
 
-    k4a_imu_sample_t sample;
-    auto imu_result = k4a_plugin::k4a_device_get_imu_sample(sensor_.device_, &sample, 0);
-
-    if (imu_result == K4A_WAIT_RESULT_TIMEOUT)
-    {
-        std::cerr << "Runtime error: k4a_imu_get_sample() returned TIMEOUT" << imu_result << std::endl;
-    }
-    else if (imu_result != K4A_WAIT_RESULT_SUCCEEDED)
-    {
-        std::cerr << "Runtime error: k4a_imu_get_sample() returned " << imu_result << std::endl;
-    }
-    if (is_record_created_ && write)
-    {
-        k4a_result_t write_result = k4a_plugin::k4a_record_write_imu_sample(recording_, sample);
-        utility::LogInfo("Writing IMU {},{},{}",sample.acc_sample.xyz.x,sample.acc_sample.xyz.y,sample.acc_sample.xyz.z);
-        if (K4A_FAILED(write_result))
+        if (imu_result == K4A_WAIT_RESULT_TIMEOUT)
         {
-            std::cerr << "Runtime error: k4a_record_write_imu_sample() returned " << write_result << std::endl;
+            std::cerr << "Runtime error: k4a_imu_get_sample() returned TIMEOUT" << imu_result << std::endl;
         }
-    }
+        else if (imu_result != K4A_WAIT_RESULT_SUCCEEDED)
+        {
+            std::cerr << "Runtime error: k4a_imu_get_sample() returned " << imu_result << std::endl;
+        }
+        if (is_record_created_ && write)
+        {
+            k4a_result_t write_result = k4a_plugin::k4a_record_write_imu_sample(recording_, sample);
+            utility::LogInfo("Writing IMU {},{},{}",sample.acc_sample.xyz.x,sample.acc_sample.xyz.y,sample.acc_sample.xyz.z);
+            if (K4A_FAILED(write_result))
+            {
+                std::cerr << "Runtime error: k4a_record_write_imu_sample() returned " << write_result << std::endl;
+            }
+        }
+    }while (imu_result == K4A_WAIT_RESULT_SUCCEEDED);
+
 
     return im_rgbd;
 }
